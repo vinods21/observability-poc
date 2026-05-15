@@ -1,0 +1,9 @@
+app:
+  storage:
+    auto-create-bucket: false
+  s3:
+    endpoint: http://localhost:9000
+    region: us-east-1
+    access-key: minioadmin
+    secret-key: minioadmin
+    path-style-access-enabled: true

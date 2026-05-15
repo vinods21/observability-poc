@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:${OTEL_SERVICE_NAME:kotlin-service}}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:2s}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+app:
+  storage:
+    bucket: ${S3_BUCKET:${MINIO_BUCKET:trace-artifacts}}
+    auto-create-bucket: ${S3_AUTO_CREATE_BUCKET:true}
+    prefix: ${S3_OBJECT_PREFIX:kotlin-service}
+  s3:
+    endpoint: ${S3_ENDPOINT:${MINIO_ENDPOINT:http://localhost:9000}}
+    region: ${S3_REGION:${MINIO_REGION:us-east-1}}
+    access-key: ${AWS_ACCESS_KEY_ID:${MINIO_ACCESS_KEY:minio}}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:${MINIO_SECRET_KEY:minio123}}
+    path-style-access-enabled: ${S3_PATH_STYLE_ACCESS_ENABLED:true}
+
+info:
+  app:
+    name: kotlin-service
+    description: Kotlin service for the distributed tracing POC
+    environment: ${APP_ENV:local}
+    namespace: ${OTEL_SERVICE_NAMESPACE:distributed-tracing-poc}
