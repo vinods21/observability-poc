@@ -9,7 +9,7 @@ This repository contains a polyglot microservices proof of concept for distribut
 - `infrastructure/otel`: OpenTelemetry Collector configuration
 - `shared/conventions`: shared service and observability conventions for future services
 
-## Local Infrastructure
+## Local Stack
 
 The repository provides Docker Compose infrastructure for:
 
@@ -18,11 +18,13 @@ The repository provides Docker Compose infrastructure for:
 - MinIO as the S3-compatible object store
 - OpenTelemetry Collector
 - Jaeger
+- Java service
+- Kotlin service
 
-Start the infrastructure:
+Start the full stack:
 
 ```powershell
-docker compose up -d
+docker compose up -d --build
 ```
 
 Jaeger UI is available at [http://localhost:16686](http://localhost:16686).
@@ -37,17 +39,10 @@ Copy `.env.example` values into your local shell environment or a `.env` file be
 - `OTEL_RESOURCE_ATTRIBUTES`
 - `KOTLIN_SERVICE_BASE_URL`
 
-Run the services in separate terminals:
+The application entrypoints exposed from Docker Compose are:
 
-```powershell
-cd services\kotlin-service
-.\gradlew.bat bootRun
-```
-
-```powershell
-cd services\java-service
-.\gradlew.bat bootRun
-```
+- Java service: `http://localhost:8080`
+- Kotlin service: `http://localhost:8081`
 
 ## Trace Demo Flow
 
@@ -66,6 +61,12 @@ Example request:
 curl -X POST http://localhost:8080/api/v1/trace-demo `
   -H "Content-Type: application/json" `
   -d "{\"message\":\"hello from client\"}"
+```
+
+To stop everything:
+
+```powershell
+docker compose down
 ```
 
 ## Extending With Go or Python
