@@ -24,53 +24,54 @@ class TraceProcessingService(
     private val tracer: Tracer
 ) {
 
-    fun process(request: ProcessTraceRequest): ProcessTraceResponse {
-        val requestId = request.requestId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
-        val redisKey = "trace:$requestId"
-        val objectKey = "${storageProperties.prefix}/$requestId.json"
-        val payloadJson = objectMapper.writeValueAsString(
-            mapOf(
-                "requestId" to requestId,
-                "message" to request.message,
-                "receivedAt" to Instant.now().toString()
+    fun process(request: ProcessTraceRequest): ProcessTraceResponse =
+        withSpan("kotlin-service.process-trace", "kotlin-service", "PROCESS") {
+            val requestId = request.requestId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
+            val redisKey = "trace:$requestId"
+            val objectKey = "${storageProperties.prefix}/$requestId.json"
+            val payloadJson = objectMapper.writeValueAsString(
+                mapOf(
+                    "requestId" to requestId,
+                    "message" to request.message,
+                    "receivedAt" to Instant.now().toString()
+                )
             )
-        )
 
-        withSpan("redis.write", "redis", "SET") {
-            redisTemplate.opsForValue().set(redisKey, request.message)
+            withSpan("redis.write", "redis", "SET") {
+                redisTemplate.opsForValue().set(redisKey, request.message)
+            }
+
+            val cachedValue = withSpan("redis.read", "redis", "GET") {
+                redisTemplate.opsForValue().get(redisKey).orEmpty()
+            }
+
+            val eTag = withSpan("s3.put-object", "aws.s3", "PutObject") {
+                s3Client.putObject(
+                    { builder ->
+                        builder
+                            .bucket(storageProperties.bucket)
+                            .key(objectKey)
+                            .contentType("application/json")
+                    },
+                    RequestBody.fromString(payloadJson)
+                ).eTag()
+            }
+
+            val currentSpan = tracer.currentSpan()
+            ProcessTraceResponse(
+                service = "kotlin-service",
+                status = "PROCESSED",
+                requestId = requestId,
+                redisKey = redisKey,
+                cachedValue = cachedValue,
+                bucket = storageProperties.bucket,
+                objectKey = objectKey,
+                objectETag = eTag,
+                traceId = currentSpan?.context()?.traceId() ?: "",
+                spanId = currentSpan?.context()?.spanId() ?: "",
+                processedAt = Instant.now()
+            )
         }
-
-        val cachedValue = withSpan("redis.read", "redis", "GET") {
-            redisTemplate.opsForValue().get(redisKey).orEmpty()
-        }
-
-        val eTag = withSpan("s3.put-object", "aws.s3", "PutObject") {
-            s3Client.putObject(
-                { builder ->
-                    builder
-                        .bucket(storageProperties.bucket)
-                        .key(objectKey)
-                        .contentType("application/json")
-                },
-                RequestBody.fromString(payloadJson)
-            ).eTag()
-        }
-
-        val currentSpan = tracer.currentSpan()
-        return ProcessTraceResponse(
-            service = "kotlin-service",
-            status = "PROCESSED",
-            requestId = requestId,
-            redisKey = redisKey,
-            cachedValue = cachedValue,
-            bucket = storageProperties.bucket,
-            objectKey = objectKey,
-            objectETag = eTag,
-            traceId = currentSpan?.context()?.traceId() ?: "",
-            spanId = currentSpan?.context()?.spanId() ?: "",
-            processedAt = Instant.now()
-        )
-    }
 
     private fun <T> withSpan(
         spanName: String,

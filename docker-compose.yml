@@ -49,6 +49,36 @@ services:
       - "16686:16686"
       - "4319:4317"
 
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    container_name: tracing-poc-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:12.0.1
+    container_name: tracing-poc-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.127.0
     container_name: tracing-poc-otel-collector
@@ -106,6 +136,8 @@ services:
       KOTLIN_SERVICE_TRACE_PATH: /api/v1/traces/process
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
       OTEL_RESOURCE_ATTRIBUTES: deployment.environment=docker,service.namespace=distributed-tracing-poc
+      OTEL_SERVICE_NAMESPACE: distributed-tracing-poc
+      APP_ENV: docker
       TRACING_SAMPLING_PROBABILITY: 1.0
     ports:
       - "8080:8080"
@@ -120,3 +152,5 @@ services:
 volumes:
   postgres-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

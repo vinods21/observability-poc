@@ -26,6 +26,7 @@ dependencies {
     implementation("software.amazon.awssdk:s3")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("io.opentelemetry:opentelemetry-exporter-otlp")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

@@ -18,6 +18,8 @@ The repository provides Docker Compose infrastructure for:
 - MinIO as the S3-compatible object store
 - OpenTelemetry Collector
 - Jaeger
+- Prometheus
+- Grafana
 - Java service
 - Kotlin service
 
@@ -28,6 +30,8 @@ docker compose up -d --build
 ```
 
 Jaeger UI is available at [http://localhost:16686](http://localhost:16686).
+Prometheus UI is available at [http://localhost:9090](http://localhost:9090).
+Grafana is available at [http://localhost:3000](http://localhost:3000) with `admin` / `admin`.
 MinIO Console is available at [http://localhost:9001](http://localhost:9001).
 
 ## Configuration
@@ -43,6 +47,8 @@ The application entrypoints exposed from Docker Compose are:
 
 - Java service: `http://localhost:8080`
 - Kotlin service: `http://localhost:8081`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
 
 ## Trace Demo Flow
 
@@ -54,6 +60,8 @@ The intended request path is:
 4. Kotlin service touches Redis
 5. Kotlin service writes or reads an object in MinIO
 6. The complete request appears as one distributed trace in Jaeger
+7. Prometheus scrapes both services from `/actuator/prometheus`
+8. Grafana visualizes the JVM and HTTP metrics with Jaeger available as a second datasource
 
 Example request:
 
